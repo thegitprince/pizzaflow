@@ -4,7 +4,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { callOpenRouter } from "./src/lib/openrouter.js";
-import { bulkUpsertMenuItems } from "./src/lib/supabase.js";
+import { bulkUpsertMenuItems } from "./src/lib/supabase-server.js";
 
 // Load environment variables
 dotenv.config();
