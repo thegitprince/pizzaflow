@@ -26,11 +26,34 @@ export default function AdminLoginPage() {
         });
         if (error) throw error;
 
-        // In a real database, verify user has admin claims/metadata
+        // Verify user has admin claims/metadata or profile role
+        let role = data.user?.user_metadata?.role;
+        let displayName = data.user?.user_metadata?.name || "Rajan (Admin)";
+
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role, name")
+            .eq("id", data.user?.id)
+            .maybeSingle();
+
+          if (profile) {
+            role = profile.role;
+            displayName = profile.name || displayName;
+          }
+        } catch (profileEx) {
+          console.warn("Profiles check skipped, using user metadata:", profileEx);
+        }
+
+        if (role !== "admin") {
+          await supabase.auth.signOut();
+          throw new Error("Access Denied. You do not have administrator permissions.");
+        }
+
         setSuccessMsg("Logged in successfully as Admin!");
         localStorage.setItem("slice_matic_admin_session", JSON.stringify({
           email: data.user?.email || email,
-          name: "Rajan (Admin)",
+          name: displayName,
           id: data.user?.id
         }));
         setTimeout(() => navigate("/admin/dashboard"), 800);
@@ -135,6 +158,12 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
+
+        <div className="text-center space-y-1">
+          <p className="text-xs text-[#9E9E9E]">
+            New administrator? <Link to="/signup" className="text-[#FF6B2B] hover:underline font-bold">Register Account</Link>
+          </p>
+        </div>
 
         <div className="text-center pt-4 border-t border-[#333333] flex justify-between text-xs font-mono">
           <Link to="/staff/login" className="text-[#9E9E9E] hover:text-[#FF6B2B] transition-colors">

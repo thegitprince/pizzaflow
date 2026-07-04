@@ -1,6 +1,6 @@
 // src/app/staff/login/page.tsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Lock, Mail, ShieldAlert } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
 
@@ -27,14 +27,49 @@ export default function StaffLoginPage() {
         if (error) {
           throw error;
         }
+
+        // Verify user has staff or admin role
+        let role = "staff";
+        let displayName = data.user?.user_metadata?.name || "SliceMatic Counter Staff";
+
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role, name")
+            .eq("id", data.user?.id)
+            .maybeSingle();
+
+          if (profile) {
+            role = profile.role || "staff";
+            displayName = profile.name || displayName;
+          }
+        } catch (profileEx) {
+          console.warn("Profiles check skipped, using user metadata:", profileEx);
+        }
+
+        if (role !== "staff" && role !== "admin") {
+          await supabase.auth.signOut();
+          throw new Error("Access Denied. You do not have staff or administrator permissions.");
+        }
+
         setSuccessMsg("Logged in successfully via Supabase!");
-        // Store session locally
-        localStorage.setItem("slice_matic_staff_session", JSON.stringify({
-          email: data.user?.email || email,
-          name: "SliceMatic Counter Staff",
-          id: data.user?.id
-        }));
-        setTimeout(() => navigate("/staff/order"), 800);
+        
+        // Store session locally and route based on role
+        if (role === "admin") {
+          localStorage.setItem("slice_matic_admin_session", JSON.stringify({
+            email: data.user?.email || email,
+            name: displayName || "SliceMatic Admin",
+            id: data.user?.id
+          }));
+          setTimeout(() => navigate("/admin/dashboard"), 800);
+        } else {
+          localStorage.setItem("slice_matic_staff_session", JSON.stringify({
+            email: data.user?.email || email,
+            name: displayName,
+            id: data.user?.id
+          }));
+          setTimeout(() => navigate("/staff/order"), 800);
+        }
       } catch (err: any) {
         setErrorMsg(err.message || "Failed to sign in. Please verify credentials.");
         setLoading(false);
@@ -139,9 +174,12 @@ export default function StaffLoginPage() {
           </button>
         </form>
 
-        <div className="text-center pt-4 border-t border-[#333333]">
+        <div className="text-center pt-4 border-t border-[#333333] space-y-2">
           <p className="text-xs text-[#9E9E9E]">
             Authorized SliceMatic personnel only.
+          </p>
+          <p className="text-xs text-[#9E9E9E]">
+            New staff? <Link to="/signup" className="text-[#FF6B2B] hover:underline font-bold">Register Account</Link>
           </p>
         </div>
 
