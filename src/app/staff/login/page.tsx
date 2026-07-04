@@ -6,8 +6,8 @@ import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
 
 export default function StaffLoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("staff@slicematic.com");
-  const [password, setPassword] = useState("pizzaflow123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
