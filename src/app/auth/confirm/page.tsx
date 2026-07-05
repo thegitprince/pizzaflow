@@ -116,10 +116,22 @@ export default function AuthConfirmPage() {
         });
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .single();
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+
+        if (userError || !userData?.user) {
+          setErrorMsg('Session error. Please try again.')
+          setLoading(false)
+          return
+        }
+        const userId = userData.user.id
+        // Verify user has staff or admin role
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .maybeSingle()
+
+        console.log('Profile fetch result:', profile, profileError)
 
       console.log('profile fetch result:', profile, profileError);
 
