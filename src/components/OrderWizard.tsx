@@ -330,6 +330,27 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
       (order as any).rich_items = richItems;
 
       setPlacedOrder(order);
+
+      // Log completed order to the server text file
+      fetch("/api/orders/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          customer_name: orderData.customer_name,
+          customer_phone: orderData.customer_phone,
+          quantity: orderData.quantity,
+          subtotal: orderData.subtotal,
+          discount: orderData.discount,
+          gst: orderData.gst,
+          total_payable: orderData.total_payable,
+          payment_mode: orderData.payment_mode,
+          cart: cart
+        })
+      }).catch(err => {
+        console.error("Failed to log order to server file:", err);
+      });
+
       setStep(5);
     } catch (e) {
       console.error("Order submission failed:", e);

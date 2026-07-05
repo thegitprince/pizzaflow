@@ -2,6 +2,7 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import fs from "fs/promises";
 import { createServer as createViteServer } from "vite";
 import { callOpenRouter } from "./src/lib/openrouter.js";
 import { bulkUpsertMenuItems } from "./src/lib/supabase-server.js";
@@ -124,6 +125,86 @@ User Question: ${question}`;
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Internal server error analyzing statistics" });
+    }
+  });
+
+  // --- API ROUTE: LOG COMPLETED ORDERS ---
+  app.post("/api/orders/log", async (req, res) => {
+    const {
+      timestamp,
+      customer_name,
+      customer_phone,
+      quantity,
+      subtotal,
+      discount,
+      gst,
+      total_payable,
+      payment_mode,
+      cart
+    } = req.body;
+
+    try {
+      const itemSelectionsList: string[] = [];
+      const unitPricesList: string[] = [];
+
+      if (Array.isArray(cart)) {
+        cart.forEach((item: any, idx: number) => {
+          const baseName = item.base?.name || "Unknown Base";
+          const basePrice = item.base?.price_inr || 0;
+          const pizzaName = item.pizza?.name || "Unknown Pizza";
+          const pizzaPrice = item.pizza?.price_inr || 0;
+          const itemQty = item.quantity || 1;
+
+          const toppingsInfo: string[] = [];
+          const toppingsPrices: string[] = [];
+
+          if (Array.isArray(item.toppings)) {
+            item.toppings.forEach((t: any) => {
+              const topName = t.topping?.name || "Unknown Topping";
+              const topPrice = t.topping?.price_inr || 0;
+              const topQty = t.quantity || 1;
+              toppingsInfo.push(`${topName} (x${topQty})`);
+              toppingsPrices.push(`${topName} (x${topQty}): ₹${Number(topPrice).toFixed(2)}`);
+            });
+          }
+
+          const toppingsStr = toppingsInfo.length > 0 ? `, Toppings: ${toppingsInfo.join(", ")}` : "";
+          const toppingsPricesStr = toppingsPrices.length > 0 ? `, Toppings: [${toppingsPrices.join(", ")}]` : "";
+
+          itemSelectionsList.push(
+            `Pizza #${idx + 1} (x${itemQty}) [Base: ${baseName}, Preset: ${pizzaName}${toppingsStr}]`
+          );
+          unitPricesList.push(
+            `Pizza #${idx + 1} [Base: ₹${Number(basePrice).toFixed(2)}, Preset: ₹${Number(pizzaPrice).toFixed(2)}${toppingsPricesStr}]`
+          );
+        });
+      }
+
+      const itemSelections = itemSelectionsList.join("; ");
+      const unitPrices = unitPricesList.join("; ");
+
+      const logBlock = [
+        `Timestamp: ${timestamp || new Date().toISOString()}`,
+        `Customer Name: ${customer_name || "N/A"}`,
+        `Phone: ${customer_phone || "N/A"}`,
+        `Item Selections: ${itemSelections || "N/A"}`,
+        `Unit Prices: ${unitPrices || "N/A"}`,
+        `Quantity: ${quantity || 0}`,
+        `Subtotal: ₹${Number(subtotal || 0).toFixed(2)}`,
+        `Discount: ₹${Number(discount || 0).toFixed(2)}`,
+        `GST: ₹${Number(gst || 0).toFixed(2)}`,
+        `Final Total: ₹${Number(total_payable || 0).toFixed(2)}`,
+        `Payment Mode: ${payment_mode || "N/A"}`,
+        "" // Blank line between orders
+      ].join("\n");
+
+      const logFilePath = path.join(process.cwd(), "orders_log.txt");
+      await fs.appendFile(logFilePath, logBlock, "utf8");
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("Error writing to orders_log.txt:", err);
+      res.status(500).json({ error: err.message || "Failed to write to order log file" });
     }
   });
 
