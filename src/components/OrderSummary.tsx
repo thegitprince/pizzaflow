@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { 
   Calendar, DollarSign, ShoppingBag, TrendingUp, Layers, 
-  Circle, RefreshCw, X, Eye, Phone, User, Hash, Clock
+  Circle, RefreshCw, X, Eye, Phone, User, Hash, Clock, Printer
 } from "lucide-react";
 import { getOrders, updateOrderStatus, Order } from "../lib/supabase";
 
@@ -380,7 +380,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
         
         return (
           <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-[#252525] border border-white/15 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div id="invoice-print-area" className="bg-[#252525] border border-white/15 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
               
               {/* Modal Header */}
               <div className="bg-[#1F1F1F] px-6 py-4 border-b border-white/10 flex items-center justify-between">
@@ -395,7 +395,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
                 </div>
                 <button 
                   onClick={() => setSelectedOrderForBill(null)}
-                  className="p-1.5 rounded-lg hover:bg-white/5 text-[#9E9E9E] hover:text-white transition-colors cursor-pointer"
+                  className="no-print p-1.5 rounded-lg hover:bg-white/5 text-[#9E9E9E] hover:text-white transition-colors cursor-pointer"
                 >
                   <X size={20} />
                 </button>
@@ -524,7 +524,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
               </div>
 
               {/* Modal Footer */}
-              <div className="bg-[#1F1F1F] border-t border-white/10 p-4 flex gap-3 justify-end">
+              <div className="no-print bg-[#1F1F1F] border-t border-white/10 p-4 flex gap-3 justify-end">
                 {allowStatusUpdate && (
                   <button
                     onClick={(e) => {
@@ -543,6 +543,12 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
                     Cycle Status: {o.status}
                   </button>
                 )}
+                <button
+                  onClick={() => window.print()}
+                  className="bg-[#FF6B2B] hover:bg-[#E05A1F] text-white font-bold font-mono text-xs uppercase px-5 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-md shadow-[#FF6B2B]/15"
+                >
+                  <Printer size={14} /> Print Invoice
+                </button>
                 <button
                   onClick={() => setSelectedOrderForBill(null)}
                   className="bg-white/10 hover:bg-white/15 text-white font-bold font-mono text-xs uppercase px-5 py-2.5 rounded-lg transition-colors cursor-pointer"

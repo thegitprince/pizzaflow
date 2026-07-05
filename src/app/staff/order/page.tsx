@@ -7,7 +7,7 @@ import { supabase } from "../../../lib/supabase";
 
 export default function StaffOrderPage() {
   const navigate = useNavigate();
-  const [staff, setStaff] = useState<{ email: string; name: string } | null>(null);
+  const [staff, setStaff] = useState<{ email: string; name: string; role: string } | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
@@ -27,7 +27,8 @@ export default function StaffOrderPage() {
 
         setStaff({
           email: user.email || "",
-          name: profile?.display_name || user.user_metadata?.name || "SliceMatic Personnel"
+          name: profile?.display_name || user.user_metadata?.name || "SliceMatic Personnel",
+          role: profile?.role || "staff"
         });
       } catch (e) {
         console.error("Failed to check auth session", e);
@@ -73,12 +74,23 @@ export default function StaffOrderPage() {
 
         {/* Staff details and actions */}
         <div className="flex items-center gap-6 text-sm">
-          <Link 
-            to="/admin/dashboard" 
-            className="text-[#9E9E9E] hover:text-[#FF6B2B] font-medium transition-colors"
-          >
-            Admin Dashboard
-          </Link>
+          {staff?.role === "admin" ? (
+            <Link 
+              to="/admin/dashboard" 
+              className="text-[#9E9E9E] hover:text-[#FF6B2B] font-medium transition-colors"
+              id="admin-dashboard-link"
+            >
+              Admin Dashboard
+            </Link>
+          ) : (
+            <span 
+              className="text-[#555555] cursor-not-allowed font-medium select-none"
+              title="Admin access required to access dashboard"
+              id="admin-dashboard-link-disabled"
+            >
+              Admin Dashboard
+            </span>
+          )}
           <div className="flex items-center gap-2 border-l border-white/10 pl-6">
             <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center text-[#FF6B2B] border border-white/5">
               <User size={16} />

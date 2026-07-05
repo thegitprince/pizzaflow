@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Users, Phone, Hash, ChevronRight, ChevronLeft, Plus, Minus, 
   Check, Wallet, CreditCard, Landmark, CheckCircle, RefreshCw, Eye,
-  Trash2, ShoppingBag, Sparkles
+  Trash2, ShoppingBag, Sparkles, Printer
 } from "lucide-react";
 import { 
   validateName, validatePhone, validateQuantity,
@@ -699,12 +699,6 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
 
               </div>
 
-              {cartError && (
-                <div className="bg-[#FF6B2B]/10 border border-[#FF6B2B]/30 rounded-xl p-4 text-[#FF6B2B] text-sm flex items-center gap-3 font-medium font-mono animate-pulse">
-                  <span>⚠️ {cartError}</span>
-                </div>
-              )}
-
               {/* CURRENT CONFIGURATION LIVE PREVIEW & ADD TO CART CTA */}
               <div className="bg-[#1F1F1F] rounded-xl p-6 border border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="space-y-1">
@@ -831,6 +825,12 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {cartError && (
+                <div className="mb-4 bg-[#FF6B2B]/10 border border-[#FF6B2B]/30 rounded-xl p-4 text-[#FF6B2B] text-sm flex items-center gap-3 font-medium font-mono animate-pulse">
+                  <span>⚠️ {cartError}</span>
                 </div>
               )}
 
@@ -1138,7 +1138,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
               className="text-center space-y-8 py-8"
             >
               {/* Header Green Tick */}
-              <div className="flex flex-col items-center gap-3">
+              <div className="no-print flex flex-col items-center gap-3">
                 <div className="w-16 h-16 rounded-full bg-[#4CAF50]/10 border-2 border-[#4CAF50] flex items-center justify-center text-[#4CAF50] animate-bounce">
                   <CheckCircle size={36} />
                 </div>
@@ -1149,7 +1149,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
               </div>
 
               {/* Order Info Cards */}
-              <div className="max-w-xl mx-auto bg-[#252525] rounded-2xl border border-white/10 p-6 space-y-6 text-left">
+              <div id="invoice-print-area" className="max-w-xl mx-auto bg-[#252525] rounded-2xl border border-white/10 p-6 space-y-6 text-left">
                 
                 {/* Meta details */}
                 <div className="grid grid-cols-2 gap-4 border-b border-white/5 pb-4 font-mono text-sm">
@@ -1226,14 +1226,22 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
               </div>
 
               {/* ACTIONS PANEL */}
-              <div className="flex flex-wrap items-center justify-center gap-4 max-w-xl mx-auto pt-4">
+              <div className="no-print flex flex-wrap items-center justify-center gap-4 max-w-xl mx-auto pt-4">
                 <button
                   type="button"
                   id="btn-new-order"
                   onClick={handleReset}
-                  className="px-8 py-3 rounded-lg font-bold uppercase tracking-wider text-sm bg-[#FF6B2B] hover:bg-[#E05A1F] text-white transition-all flex items-center gap-2 shadow-lg shadow-[#FF6B2B]/20 cursor-pointer"
+                  className="px-6 py-3 rounded-lg font-bold uppercase tracking-wider text-sm bg-[#FF6B2B] hover:bg-[#E05A1F] text-white transition-all flex items-center gap-2 shadow-lg shadow-[#FF6B2B]/20 cursor-pointer"
                 >
                   <RefreshCw size={16} /> Take New Order
+                </button>
+                <button
+                  type="button"
+                  id="btn-print-receipt"
+                  onClick={() => window.print()}
+                  className="px-6 py-3 rounded-lg font-bold uppercase tracking-wider text-sm border border-white/10 text-[#FAFAFA] hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Printer size={16} /> Print Receipt
                 </button>
                 {source === "staff" && (
                   <button
@@ -1242,7 +1250,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                       handleReset();
                       navigate("/admin/dashboard");
                     }}
-                    className="px-8 py-3 rounded-lg font-bold uppercase tracking-wider text-sm border border-white/10 text-[#FAFAFA] hover:bg-[#333333] transition-colors flex items-center gap-2 cursor-pointer"
+                    className="px-6 py-3 rounded-lg font-bold uppercase tracking-wider text-sm border border-white/10 text-[#FAFAFA] hover:bg-[#333333] transition-colors flex items-center gap-2 cursor-pointer"
                   >
                     <Eye size={16} /> View Today's Orders (Admin)
                   </button>
