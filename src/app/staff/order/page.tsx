@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { LogOut, Pizza, User } from "lucide-react";
 import OrderWizard from "../../../components/OrderWizard";
+import { supabase } from "../../../lib/supabase";
 
 export default function StaffOrderPage() {
   const navigate = useNavigate();
@@ -10,22 +11,39 @@ export default function StaffOrderPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const sessionStr = localStorage.getItem("slice_matic_staff_session");
-    if (!sessionStr) {
-      navigate("/staff/login");
-    } else {
+    const checkUser = async () => {
       try {
-        setStaff(JSON.parse(sessionStr));
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !session.user) {
+          navigate("/staff/login");
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name")
+          .single();
+
+        setStaff({
+          email: session.user.email || "",
+          name: profile?.display_name || session.user.user_metadata?.name || "SliceMatic Personnel"
+        });
       } catch (e) {
-        console.error("Failed to parse staff session", e);
+        console.error("Failed to check auth session", e);
         navigate("/staff/login");
+      } finally {
+        setCheckingAuth(false);
       }
-    }
-    setCheckingAuth(false);
+    };
+    checkUser();
   }, [navigate]);
 
-  const handleSignOut = () => {
-    localStorage.removeItem("slice_matic_staff_session");
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Signout error:", e);
+    }
     navigate("/staff/login");
   };
 

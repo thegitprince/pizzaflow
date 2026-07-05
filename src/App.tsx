@@ -24,48 +24,38 @@ function ProtectedRoute({ children, requireAdmin }: { children: React.ReactNode;
 
   useEffect(() => {
     const checkAuth = async () => {
-      let hasStaffSession = false;
-      let hasAdminSession = false;
-      try {
-        hasStaffSession = !!localStorage.getItem("slice_matic_staff_session");
-        hasAdminSession = !!localStorage.getItem("slice_matic_admin_session");
-      } catch (e) {
-        console.warn(e);
-      }
-
       if (isSupabaseConfigured && supabase) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session && session.user) {
             setIsAuthenticated(true);
-            const { data: profile } = await supabase
+            const { data: profile, error } = await supabase
               .from("profiles")
               .select("role")
-              .eq("id", session.user.id)
-              .maybeSingle();
+              .single();
 
-            const role = profile?.role || session.user.user_metadata?.role || "staff";
-            if (role === "admin") {
-              setIsAdmin(true);
+            if (!error && profile) {
+              const role = profile.role || "staff";
+              if (role === "admin") {
+                setIsAdmin(true);
+              } else {
+                setIsAdmin(false);
+              }
+            } else {
+              setIsAdmin(false);
             }
           } else {
             setIsAuthenticated(false);
+            setIsAdmin(false);
           }
         } catch (err) {
           console.error("Auth check failed:", err);
           setIsAuthenticated(false);
+          setIsAdmin(false);
         }
       } else {
-        // Fallback for offline evaluation
-        if (hasAdminSession) {
-          setIsAuthenticated(true);
-          setIsAdmin(true);
-        } else if (hasStaffSession) {
-          setIsAuthenticated(true);
-          setIsAdmin(false);
-        } else {
-          setIsAuthenticated(false);
-        }
+        setIsAuthenticated(false);
+        setIsAdmin(false);
       }
       setLoading(false);
     };

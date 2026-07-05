@@ -26,24 +26,19 @@ export default function AdminLoginPage() {
         });
         if (error) throw error;
 
-        // Verify user has admin claims/metadata or profile role
-        let role = data.user?.user_metadata?.role;
-        let displayName = data.user?.user_metadata?.name || "Rajan (Admin)";
+        // Verify user has admin role
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role")
+          .single();
 
-        try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role, name")
-            .eq("id", data.user?.id)
-            .maybeSingle();
-
-          if (profile) {
-            role = profile.role;
-            displayName = profile.name || displayName;
-          }
-        } catch (profileEx) {
-          console.warn("Profiles check skipped, using user metadata:", profileEx);
+        if (profileError) {
+          console.error("Profile check failed:", profileError);
+          await supabase.auth.signOut();
+          throw new Error("Could not verify your account role. Please contact your administrator.");
         }
+
+        const role = profile?.role; // will be 'staff' or 'admin' as a string
 
         if (role !== "admin") {
           await supabase.auth.signOut();
@@ -51,11 +46,6 @@ export default function AdminLoginPage() {
         }
 
         setSuccessMsg("Logged in successfully as Admin!");
-        localStorage.setItem("slice_matic_admin_session", JSON.stringify({
-          email: data.user?.email || email,
-          name: displayName,
-          id: data.user?.id
-        }));
         setTimeout(() => navigate("/admin/dashboard"), 800);
       } catch (err: any) {
         setErrorMsg(err.message || "Failed to authenticate. Access Denied.");

@@ -29,23 +29,18 @@ export default function StaffLoginPage() {
         }
 
         // Verify user has staff or admin role
-        let role = "staff";
-        let displayName = data.user?.user_metadata?.name || "SliceMatic Counter Staff";
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role")
+          .single();
 
-        try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role, name")
-            .eq("id", data.user?.id)
-            .maybeSingle();
-
-          if (profile) {
-            role = profile.role || "staff";
-            displayName = profile.name || displayName;
-          }
-        } catch (profileEx) {
-          console.warn("Profiles check skipped, using user metadata:", profileEx);
+        if (profileError) {
+          console.error("Profile check failed:", profileError);
+          await supabase.auth.signOut();
+          throw new Error("Could not verify your account role. Please contact your administrator.");
         }
+
+        const role = profile?.role; // will be 'staff' or 'admin' as a string
 
         if (role !== "staff" && role !== "admin") {
           await supabase.auth.signOut();
@@ -54,20 +49,10 @@ export default function StaffLoginPage() {
 
         setSuccessMsg("Logged in successfully via Supabase!");
         
-        // Store session locally and route based on role
+        // Route based on role
         if (role === "admin") {
-          localStorage.setItem("slice_matic_admin_session", JSON.stringify({
-            email: data.user?.email || email,
-            name: displayName || "SliceMatic Admin",
-            id: data.user?.id
-          }));
           setTimeout(() => navigate("/admin/dashboard"), 800);
         } else {
-          localStorage.setItem("slice_matic_staff_session", JSON.stringify({
-            email: data.user?.email || email,
-            name: displayName,
-            id: data.user?.id
-          }));
           setTimeout(() => navigate("/staff/order"), 800);
         }
       } catch (err: any) {

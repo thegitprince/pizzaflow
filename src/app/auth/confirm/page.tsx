@@ -99,42 +99,44 @@ export default function AuthConfirmPage() {
 
       setSuccessMsg("Password updated successfully!");
 
-      // 2. Fetch profile to check role
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role, display_name")
-        .eq("id", data.user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.warn("Could not fetch user profile, defaulting to Staff.", profileError);
+      // Wait for session to be fully established
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // Session not ready yet, use onAuthStateChange
+        await new Promise<void>((resolve) => {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, currentSession) => {
+              if (currentSession) {
+                subscription.unsubscribe();
+                resolve();
+              }
+            }
+          );
+        });
       }
 
-      const role = profile?.role || "staff";
-      const displayName = profile?.display_name || data.user.user_metadata?.name || "SliceMatic Personnel";
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .single();
 
-      // 3. Establish local session and redirect
+      console.log('profile fetch result:', profile, profileError);
+
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        setErrorMsg('Could not verify your account role. Please contact your administrator.');
+        setLoading(false);
+        return;
+      }
+
+      const role = profile?.role;  // will be 'staff' or 'admin' as a string
+
       if (role === "admin") {
-        localStorage.setItem(
-          "slice_matic_admin_session",
-          JSON.stringify({
-            email: data.user.email,
-            name: displayName,
-            id: data.user.id,
-          })
-        );
         setTimeout(() => {
           navigate("/admin/dashboard");
         }, 1200);
       } else {
-        localStorage.setItem(
-          "slice_matic_staff_session",
-          JSON.stringify({
-            email: data.user.email,
-            name: displayName,
-            id: data.user.id,
-          })
-        );
         setTimeout(() => {
           navigate("/staff/order");
         }, 1200);
