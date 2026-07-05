@@ -27,12 +27,22 @@ export default function StaffLoginPage() {
         if (error) {
           throw error;
         }
+        const { data: userData, error: userError } = await supabase.auth.getUser()
 
+        if (userError || !userData?.user) {
+          setErrorMsg('Session error. Please try again.')
+          setLoading(false)
+          return
+        }
+        const userId = userData.user.id
         // Verify user has staff or admin role
         const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .single();
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .maybeSingle()
+
+        console.log('Profile fetch result:', profile, profileError)
 
         if (profileError) {
           console.error("Profile check failed:", profileError);
