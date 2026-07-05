@@ -13,20 +13,21 @@ export default function StaffOrderPage() {
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session || !session.user) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
           navigate("/staff/login");
           return;
         }
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("display_name")
-          .single();
+          .select("role, display_name")
+          .eq("id", user.id)
+          .maybeSingle();
 
         setStaff({
-          email: session.user.email || "",
-          name: profile?.display_name || session.user.user_metadata?.name || "SliceMatic Personnel"
+          email: user.email || "",
+          name: profile?.display_name || user.user_metadata?.name || "SliceMatic Personnel"
         });
       } catch (e) {
         console.error("Failed to check auth session", e);

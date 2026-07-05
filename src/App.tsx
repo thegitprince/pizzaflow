@@ -26,13 +26,14 @@ function ProtectedRoute({ children, requireAdmin }: { children: React.ReactNode;
     const checkAuth = async () => {
       if (isSupabaseConfigured && supabase) {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session && session.user) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
             setIsAuthenticated(true);
             const { data: profile, error } = await supabase
               .from("profiles")
-              .select("role")
-              .single();
+              .select("role, display_name")
+              .eq("id", user.id)
+              .maybeSingle();
 
             if (!error && profile) {
               const role = profile.role || "staff";
