@@ -42,7 +42,7 @@ export default function StaffLoginPage() {
           .eq('id', userId)
           .maybeSingle()
 
-        console.log('Profile fetch result:', profile, profileError)
+        console.log('Profile fetch result, stafflogin:', profile, profileError)
 
         if (profileError) {
           console.error("Profile check failed:", profileError);
