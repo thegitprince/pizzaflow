@@ -930,11 +930,11 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                   {cartTotals.totalQuantity >= DISCOUNT_THRESHOLD ? (
                     <div className="bg-[#4CAF50]/10 border border-[#4CAF50]/30 rounded-xl p-4 text-[#4CAF50] text-sm flex items-center gap-3 justify-center font-medium">
                       <Sparkles size={18} />
-                      <span>🎉 Flat 10% Discount applied! Total quantity of {cartTotals.totalQuantity} satisfies the bulk criteria!</span>
+                      <span>🎉 Flat 10% Discount applied!</span>
                     </div>
                   ) : (
                     <div className="bg-[#FF6B2B]/5 border border-[#FF6B2B]/20 rounded-xl p-4 text-[#9E9E9E] text-xs text-center leading-relaxed">
-                      💡 Tip: Add <span className="text-[#FF6B2B] font-bold font-mono">{DISCOUNT_THRESHOLD - cartTotals.totalQuantity}</span> more pizzas to qualify for an automatic <span className="text-[#FF6B2B] font-bold">10% discount</span> on your bill!
+                      💡 Tip: Add <span className="text-[#FF6B2B] font-bold font-mono">{DISCOUNT_THRESHOLD - cartTotals.totalQuantity}</span> more pizzas to qualify for a <span className="text-[#FF6B2B] font-bold">10% discount</span> on your bill!
                     </div>
                   )}
                 </div>
