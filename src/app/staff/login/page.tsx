@@ -28,7 +28,6 @@ export default function StaffLoginPage() {
           throw error;
         }
         const { data: userData, error: userError } = await supabase.auth.getUser()
-        console.log('getUser result:', userData, userError) 
 
         if (userError || !userData?.user) {
           setErrorMsg('Session error. Please try again.')
@@ -42,8 +41,6 @@ export default function StaffLoginPage() {
           .select('role')
           .eq('id', userId)
           .maybeSingle()
-
-        console.log('Profile fetch result, stafflogin:', profile, profileError)
 
         if (profileError) {
           console.error("Profile check failed:", profileError);

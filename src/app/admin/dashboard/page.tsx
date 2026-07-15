@@ -5,7 +5,7 @@ import {
   BarChart3, Calendar, DollarSign, ShoppingBag, Sparkles, 
   TrendingUp, Users, ArrowRight, Pizza, Layers, Circle, RefreshCw, Send, HelpCircle 
 } from "lucide-react";
-import { getOrders, updateOrderStatus, Order } from "../../../lib/supabase";
+import { getOrders, updateOrderStatus, getAuthHeaders, Order } from "../../../lib/supabase";
 import OrderSummary from "../../../components/OrderSummary";
 
 export default function AdminDashboardPage() {
@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
     try {
       const response = await fetch("/api/ai/insights", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           question: query,
           statistics: stats

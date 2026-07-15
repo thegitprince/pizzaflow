@@ -14,6 +14,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export const isSupabaseConfigured = true;
 
+// Returns Authorization headers carrying the current session's access token,
+// so requests to protected server endpoints can be authenticated.
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token
+    ? { Authorization: `Bearer ${session.access_token}` }
+    : {};
+}
+
 // --- FALLBACK MOCK DATA ENGINE ---
 // This ensures that the application is fully interactive and persistent (via LocalStorage/Memory)
 // even when Supabase is not yet configured.

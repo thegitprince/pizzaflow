@@ -131,10 +131,6 @@ export default function AuthConfirmPage() {
           .eq('id', userId)
           .maybeSingle()
 
-        console.log('Profile fetch result:', profile, profileError)
-
-      console.log('profile fetch result:', profile, profileError);
-
       if (profileError) {
         console.error('Profile fetch error:', profileError);
         setErrorMsg('Could not verify your account role. Please contact your administrator.');

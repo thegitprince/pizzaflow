@@ -12,7 +12,7 @@ import {
   DISCOUNT_THRESHOLD 
 } from "../lib/core";
 import { 
-  getMenuItems, createOrder, MenuItem, Order 
+  getMenuItems, createOrder, getAuthHeaders, MenuItem, Order 
 } from "../lib/supabase";
 
 interface OrderWizardProps {
@@ -332,9 +332,10 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
       setPlacedOrder(order);
 
       // Log completed order to the server text file
+      const authHeaders = await getAuthHeaders();
       fetch("/api/orders/log", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           timestamp: new Date().toISOString(),
           customer_name: orderData.customer_name,

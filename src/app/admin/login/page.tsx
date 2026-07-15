@@ -6,8 +6,8 @@ import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@slicematic.com");
-  const [password, setPassword] = useState("pizzaflow123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -41,8 +41,6 @@ export default function AdminLoginPage() {
           .select('role')
           .eq('id', userId)
           .maybeSingle()
-
-        console.log('Profile fetch result, adminlogin:', profile, profileError)
 
         if (profileError) {
           console.error("Profile check failed:", profileError);
