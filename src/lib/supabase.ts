@@ -1,5 +1,6 @@
 // src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js'
+import { upsertMenuItems } from './menu-upsert'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -13,6 +14,56 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export const isSupabaseConfigured = true;
+
+// Throws a descriptive error when Supabase is unavailable, so callers don't
+// each repeat the same guard.
+export function assertSupabaseConfigured(
+  message = "Supabase is not configured."
+): void {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error(message);
+  }
+}
+
+// Signs a user in and verifies their profile role is one of `allowedRoles`.
+// Signs the user back out and throws when verification fails.
+export async function signInWithRole(
+  email: string,
+  password: string,
+  allowedRoles: string[],
+  deniedMessage: string
+): Promise<{ role: string }> {
+  assertSupabaseConfigured(
+    "Database offline: Supabase credentials are not configured. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+  );
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    throw new Error("Session error. Please try again.");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userData.user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    await supabase.auth.signOut();
+    throw new Error("Could not verify your account role. Please contact your administrator.");
+  }
+
+  const role = profile?.role;
+  if (!role || !allowedRoles.includes(role)) {
+    await supabase.auth.signOut();
+    throw new Error(deniedMessage);
+  }
+
+  return { role };
+}
 
 // --- FALLBACK MOCK DATA ENGINE ---
 // This ensures that the application is fully interactive and persistent (via LocalStorage/Memory)
@@ -116,9 +167,7 @@ function saveLocalDB(menu: MenuItem[], orders: Order[]) {
 // Database Helpers (Strict production Supabase calls)
 
 export async function getMenuItems(): Promise<MenuItem[]> {
-  if (!isSupabaseConfigured || !supabase) {
-    throw new Error("Supabase is not configured. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment.");
-  }
+  assertSupabaseConfigured("Supabase is not configured. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment.");
   const { data, error } = await supabase
     .from("menu_items")
     .select("*")
@@ -132,9 +181,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 }
 
 export async function addMenuItem(item: Omit<MenuItem, "id" | "updated_at">): Promise<MenuItem> {
-  if (!isSupabaseConfigured || !supabase) {
-    throw new Error("Supabase is not configured.");
-  }
+  assertSupabaseConfigured();
   const { data, error } = await supabase
     .from("menu_items")
     .insert([item])
@@ -151,9 +198,7 @@ export async function addMenuItem(item: Omit<MenuItem, "id" | "updated_at">): Pr
 }
 
 export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Promise<MenuItem> {
-  if (!isSupabaseConfigured || !supabase) {
-    throw new Error("Supabase is not configured.");
-  }
+  assertSupabaseConfigured();
   const { data, error } = await supabase
     .from("menu_items")
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -174,9 +219,7 @@ export async function createOrder(
   order: Omit<Order, "id" | "created_at" | "items">, 
   itemsSnapshots: { menu_item_id: string; category: string; name: string; unit_price_snapshot: number }[]
 ): Promise<Order> {
-  if (!isSupabaseConfigured || !supabase) {
-    throw new Error("Supabase is not configured.");
-  }
+  assertSupabaseConfigured();
   
   // 1. Insert order
   const { data: orderData, error: orderError } = await supabase
@@ -237,9 +280,7 @@ export async function getOrders(filters?: {
   paymentMode?: string;
   status?: string;
 }): Promise<Order[]> {
-  if (!isSupabaseConfigured || !supabase) {
-    throw new Error("Supabase is not configured.");
-  }
+  assertSupabaseConfigured();
   
   let query = supabase
     .from("orders")
@@ -283,9 +324,7 @@ export async function getOrders(filters?: {
 }
 
 export async function updateOrderStatus(orderId: string, status: "confirmed" | "preparing" | "ready" | "delivered"): Promise<void> {
-  if (!isSupabaseConfigured || !supabase) {
-    throw new Error("Supabase is not configured.");
-  }
+  assertSupabaseConfigured();
   
   const { error } = await supabase
     .from("orders")
@@ -300,60 +339,6 @@ export async function updateOrderStatus(orderId: string, status: "confirmed" | "
 
 // Bulk seed upsert
 export async function bulkUpsertMenuItems(items: Omit<MenuItem, "id" | "updated_at">[]): Promise<{ imported: number, updated: number, skipped: number, report: string[] }> {
-  let imported = 0;
-  let updated = 0;
-  let skipped = 0;
-  const report: string[] = [];
-
-  if (!isSupabaseConfigured || !supabase) {
-    throw new Error("Supabase is not configured.");
-  }
-  
-  for (const item of items) {
-    try {
-      // Check if exists
-      const { data: existing } = await supabase
-        .from("menu_items")
-        .select("id")
-        .eq("code", item.code)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from("menu_items")
-          .update({
-            name: item.name,
-            price_inr: item.price_inr,
-            description: item.description,
-            is_active: item.is_active,
-            category: item.category,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", existing.id);
-
-        if (error) throw error;
-        updated++;
-        report.push(`Updated ${item.code}: ${item.name}`);
-      } else {
-        const { error } = await supabase
-          .from("menu_items")
-          .insert([{
-            code: item.code,
-            category: item.category,
-            name: item.name,
-            price_inr: item.price_inr,
-            description: item.description,
-            is_active: item.is_active
-          }]);
-
-        if (error) throw error;
-        imported++;
-        report.push(`Imported ${item.code}: ${item.name}`);
-      }
-    } catch (err) {
-      skipped++;
-      report.push(`Skipped ${item.code || "unknown"}: ${String(err)}`);
-    }
-  }
-  return { imported, updated, skipped, report };
+  assertSupabaseConfigured();
+  return upsertMenuItems(supabase, items);
 }

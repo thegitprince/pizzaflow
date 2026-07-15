@@ -6,6 +6,8 @@ import {
   TrendingUp, Users, ArrowRight, Pizza, Layers, Circle, RefreshCw, Send, HelpCircle 
 } from "lucide-react";
 import { getOrders, updateOrderStatus, Order } from "../../../lib/supabase";
+import { getNextOrderStatus } from "../../../lib/core";
+import { formatRupeesGrouped } from "../../../lib/format";
 import OrderSummary from "../../../components/OrderSummary";
 
 export default function AdminDashboardPage() {
@@ -56,12 +58,7 @@ export default function AdminDashboardPage() {
 
   // Status Cycle Forward Handler
   const handleCycleStatus = async (order: Order) => {
-    const statuses: Array<"confirmed" | "preparing" | "ready" | "delivered"> = [
-      "confirmed", "preparing", "ready", "delivered"
-    ];
-    const currentIndex = statuses.indexOf(order.status);
-    const nextIndex = (currentIndex + 1) % statuses.length;
-    const nextStatus = statuses[nextIndex];
+    const nextStatus = getNextOrderStatus(order.status);
 
     try {
       await updateOrderStatus(order.id, nextStatus);
@@ -237,7 +234,7 @@ export default function AdminDashboardPage() {
             <div className="space-y-1">
               <span className="text-xs font-mono text-[#9E9E9E] uppercase tracking-wider block">Today's Revenue</span>
               <span className="text-2xl font-bold font-mono text-[#FF6B2B]">
-                ₹{todayRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatRupeesGrouped(todayRevenue)}
               </span>
             </div>
             <div className="bg-[#FF6B2B]/10 p-3 rounded-xl text-[#FF6B2B]">
@@ -261,7 +258,7 @@ export default function AdminDashboardPage() {
             <div className="space-y-1">
               <span className="text-xs font-mono text-[#9E9E9E] uppercase tracking-wider block">Avg Ticket Value</span>
               <span className="text-2xl font-bold font-mono text-[#FAFAFA]">
-                ₹{avgOrderValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatRupeesGrouped(avgOrderValue)}
               </span>
             </div>
             <div className="bg-sky-500/10 p-3 rounded-xl text-sky-400">

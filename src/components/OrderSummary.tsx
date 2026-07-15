@@ -5,6 +5,8 @@ import {
   Circle, RefreshCw, X, Eye, Phone, User, Hash, Clock, Printer
 } from "lucide-react";
 import { getOrders, updateOrderStatus, Order } from "../lib/supabase";
+import { getNextOrderStatus } from "../lib/core";
+import { formatRupees, formatRupeesGrouped } from "../lib/format";
 
 interface OrderSummaryProps {
   allowStatusUpdate?: boolean;
@@ -69,13 +71,8 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
   const handleCycleStatus = async (order: Order, e: React.MouseEvent) => {
     e.stopPropagation(); // Avoid triggering details modal if clicking on the badge
     if (!allowStatusUpdate) return;
-    
-    const statuses: Array<"confirmed" | "preparing" | "ready" | "delivered"> = [
-      "confirmed", "preparing", "ready", "delivered"
-    ];
-    const currentIndex = statuses.indexOf(order.status);
-    const nextIndex = (currentIndex + 1) % statuses.length;
-    const nextStatus = statuses[nextIndex];
+
+    const nextStatus = getNextOrderStatus(order.status);
 
     try {
       await updateOrderStatus(order.id, nextStatus);
@@ -239,7 +236,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
           <div className="space-y-1.5">
             <span className="text-xs font-mono text-[#9E9E9E] uppercase tracking-wider block">Total Revenue</span>
             <span className="text-3xl font-extrabold font-mono text-[#FF6B2B]">
-              ₹{totalRevenue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatRupeesGrouped(totalRevenue)}
             </span>
           </div>
           <div className="bg-[#FF6B2B]/10 p-3 rounded-xl text-[#FF6B2B]">
@@ -263,7 +260,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
           <div className="space-y-1.5">
             <span className="text-xs font-mono text-[#9E9E9E] uppercase tracking-wider block">Avg Ticket Size</span>
             <span className="text-3xl font-extrabold font-mono text-[#FAFAFA]">
-              ₹{avgOrderValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatRupeesGrouped(avgOrderValue)}
             </span>
           </div>
           <div className="bg-sky-500/10 p-3 rounded-xl text-sky-400">
@@ -339,7 +336,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
                         {order.quantity}
                       </td>
                       <td className="px-5 py-4 text-right font-mono font-bold text-[#FF6B2B]">
-                        ₹{Number(order.total_payable).toFixed(2)}
+                        {formatRupees(order.total_payable)}
                       </td>
                       <td className="px-5 py-4 text-center">
                         <span className="bg-[#1A1A1A] border border-white/10 px-2 py-0.5 rounded text-[11px] font-mono text-white">
@@ -461,11 +458,11 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
                                 {pQty} × {pName}
                               </span>
                               <span className="text-xs text-[#9E9E9E] font-mono font-medium block mt-0.5">
-                                Base: {bName} (₹{Number(bPrice).toFixed(2)})
+                                Base: {bName} ({formatRupees(bPrice)})
                               </span>
                             </div>
                             <span className="text-white font-mono font-bold text-sm">
-                              ₹{itemisedSubtotal.toFixed(2)}
+                              {formatRupees(itemisedSubtotal)}
                             </span>
                           </div>
 
@@ -479,7 +476,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
                                 return (
                                   <div key={tidx} className="flex justify-between items-center text-xs text-[#9E9E9E] font-mono">
                                     <span>• {tName} (Qty: {t.qty})</span>
-                                    <span>₹{((tPrice) * t.qty).toFixed(2)}</span>
+                                    <span>{formatRupees(tPrice * t.qty)}</span>
                                   </div>
                                 );
                               })}
@@ -495,24 +492,24 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
                 <div className="border-t border-white/10 pt-4 space-y-2.5 font-mono text-xs">
                   <div className="flex justify-between text-[#9E9E9E]">
                     <span>Invoice Subtotal:</span>
-                    <span className="text-white">₹{Number(o.subtotal).toFixed(2)}</span>
+                    <span className="text-white">{formatRupees(o.subtotal)}</span>
                   </div>
 
                   {Number(o.discount) > 0 && (
                     <div className="flex justify-between text-[#4CAF50] font-semibold">
                       <span>Bulk Order Discount (10%):</span>
-                      <span>−₹{Number(o.discount).toFixed(2)}</span>
+                      <span>−{formatRupees(o.discount)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between text-[#9E9E9E]">
                     <span>GST (18% Service Tax):</span>
-                    <span className="text-white">+₹{Number(o.gst).toFixed(2)}</span>
+                    <span className="text-white">+{formatRupees(o.gst)}</span>
                   </div>
 
                   <div className="flex justify-between text-base font-extrabold text-white pt-2.5 border-t border-double border-white/10">
                     <span className="font-serif text-sm">Settled Net Payable:</span>
-                    <span className="text-[#FF6B2B] text-lg">₹{Number(o.total_payable).toFixed(2)}</span>
+                    <span className="text-[#FF6B2B] text-lg">{formatRupees(o.total_payable)}</span>
                   </div>
                 </div>
 

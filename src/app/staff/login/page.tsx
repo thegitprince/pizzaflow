@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Lock, Mail, ShieldAlert } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { isSupabaseConfigured, signInWithRole } from "../../../lib/supabase";
 
 export default function StaffLoginPage() {
   const navigate = useNavigate();
@@ -18,60 +18,24 @@ export default function StaffLoginPage() {
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { error, data } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        if (error) {
-          throw error;
-        }
-        const { data: userData, error: userError } = await supabase.auth.getUser()
-        console.log('getUser result:', userData, userError) 
+    try {
+      const { role } = await signInWithRole(
+        email,
+        password,
+        ["staff", "admin"],
+        "Access Denied. You do not have staff or administrator permissions."
+      );
 
-        if (userError || !userData?.user) {
-          setErrorMsg('Session error. Please try again.')
-          setLoading(false)
-          return
-        }
-        const userId = userData.user.id
-        // Verify user has staff or admin role
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle()
+      setSuccessMsg("Logged in successfully via Supabase!");
 
-        console.log('Profile fetch result, stafflogin:', profile, profileError)
-
-        if (profileError) {
-          console.error("Profile check failed:", profileError);
-          await supabase.auth.signOut();
-          throw new Error("Could not verify your account role. Please contact your administrator.");
-        }
-
-        const role = profile?.role; // will be 'staff' or 'admin' as a string
-
-        if (role !== "staff" && role !== "admin") {
-          await supabase.auth.signOut();
-          throw new Error("Access Denied. You do not have staff or administrator permissions.");
-        }
-
-        setSuccessMsg("Logged in successfully via Supabase!");
-        
-        // Route based on role
-        if (role === "admin") {
-          setTimeout(() => navigate("/admin/dashboard"), 800);
-        } else {
-          setTimeout(() => navigate("/staff/order"), 800);
-        }
-      } catch (err: any) {
-        setErrorMsg(err.message || "Failed to sign in. Please verify credentials.");
-        setLoading(false);
+      // Route based on role
+      if (role === "admin") {
+        setTimeout(() => navigate("/admin/dashboard"), 800);
+      } else {
+        setTimeout(() => navigate("/staff/order"), 800);
       }
-    } else {
-      setErrorMsg("Database offline: Supabase credentials are not configured. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to sign in. Please verify credentials.");
       setLoading(false);
     }
   };

@@ -6,6 +6,8 @@ import fs from "fs/promises";
 import { createServer as createViteServer } from "vite";
 import { callOpenRouter } from "./src/lib/openrouter.js";
 import { bulkUpsertMenuItems } from "./src/lib/supabase-server.js";
+import { categoryFromCode } from "./src/lib/core.js";
+import { formatRupees } from "./src/lib/format.js";
 
 // Load environment variables
 dotenv.config();
@@ -60,11 +62,8 @@ async function startServer() {
           return;
         }
 
-        let category = "pizza";
-        if (code.startsWith("B")) category = "base";
-        else if (code.startsWith("T")) category = "topping";
-        else if (code.startsWith("P")) category = "pizza";
-        else {
+        const category = categoryFromCode(code);
+        if (!category) {
           skippedCount++;
           localReport.push(`Line ${lineNum}: Skipped. Invalid prefix.`);
           return;
@@ -164,7 +163,7 @@ User Question: ${question}`;
               const topPrice = t.topping?.price_inr || 0;
               const topQty = t.quantity || 1;
               toppingsInfo.push(`${topName} (x${topQty})`);
-              toppingsPrices.push(`${topName} (x${topQty}): ₹${Number(topPrice).toFixed(2)}`);
+              toppingsPrices.push(`${topName} (x${topQty}): ${formatRupees(topPrice)}`);
             });
           }
 
@@ -175,7 +174,7 @@ User Question: ${question}`;
             `Pizza #${idx + 1} (x${itemQty}) [Base: ${baseName}, Preset: ${pizzaName}${toppingsStr}]`
           );
           unitPricesList.push(
-            `Pizza #${idx + 1} [Base: ₹${Number(basePrice).toFixed(2)}, Preset: ₹${Number(pizzaPrice).toFixed(2)}${toppingsPricesStr}]`
+            `Pizza #${idx + 1} [Base: ${formatRupees(basePrice)}, Preset: ${formatRupees(pizzaPrice)}${toppingsPricesStr}]`
           );
         });
       }
@@ -190,10 +189,10 @@ User Question: ${question}`;
         `Item Selections: ${itemSelections || "N/A"}`,
         `Unit Prices: ${unitPrices || "N/A"}`,
         `Quantity: ${quantity || 0}`,
-        `Subtotal: ₹${Number(subtotal || 0).toFixed(2)}`,
-        `Discount: ₹${Number(discount || 0).toFixed(2)}`,
-        `GST: ₹${Number(gst || 0).toFixed(2)}`,
-        `Final Total: ₹${Number(total_payable || 0).toFixed(2)}`,
+        `Subtotal: ${formatRupees(subtotal || 0)}`,
+        `Discount: ${formatRupees(discount || 0)}`,
+        `GST: ${formatRupees(gst || 0)}`,
+        `Final Total: ${formatRupees(total_payable || 0)}`,
         `Payment Mode: ${payment_mode || "N/A"}`,
         "" // Blank line between orders
       ].join("\n");
