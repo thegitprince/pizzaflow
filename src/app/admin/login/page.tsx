@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Lock, Mail, ShieldAlert, Key } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { isSupabaseConfigured, signInWithRole } from "../../../lib/supabase";
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
@@ -18,53 +18,18 @@ export default function AdminLoginPage() {
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { error, data } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        if (error) throw error;
+    try {
+      await signInWithRole(
+        email,
+        password,
+        ["admin"],
+        "Access Denied. You do not have administrator permissions."
+      );
 
-        // Verify user has admin role
-        const { data: userData, error: userError } = await supabase.auth.getUser()
-
-        if (userError || !userData?.user) {
-          setErrorMsg('Session error. Please try again.')
-          setLoading(false)
-          return
-        }
-        const userId = userData.user.id
-        // Verify user has staff or admin role
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle()
-
-        console.log('Profile fetch result, adminlogin:', profile, profileError)
-
-        if (profileError) {
-          console.error("Profile check failed:", profileError);
-          await supabase.auth.signOut();
-          throw new Error("Could not verify your account role. Please contact your administrator.");
-        }
-
-        const role = profile?.role; // will be 'staff' or 'admin' as a string
-
-        if (role !== "admin") {
-          await supabase.auth.signOut();
-          throw new Error("Access Denied. You do not have administrator permissions.");
-        }
-
-        setSuccessMsg("Logged in successfully as Admin!");
-        setTimeout(() => navigate("/admin/dashboard"), 800);
-      } catch (err: any) {
-        setErrorMsg(err.message || "Failed to authenticate. Access Denied.");
-        setLoading(false);
-      }
-    } else {
-      setErrorMsg("Database offline: Supabase credentials are not configured. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+      setSuccessMsg("Logged in successfully as Admin!");
+      setTimeout(() => navigate("/admin/dashboard"), 800);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to authenticate. Access Denied.");
       setLoading(false);
     }
   };

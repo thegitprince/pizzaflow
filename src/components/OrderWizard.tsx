@@ -9,8 +9,9 @@ import {
 } from "lucide-react";
 import { 
   validateName, validatePhone, validateQuantity,
-  DISCOUNT_THRESHOLD 
+  DISCOUNT_THRESHOLD, DISCOUNT_RATE, GST_RATE 
 } from "../lib/core";
+import { formatRupees } from "../lib/format";
 import { 
   getMenuItems, createOrder, MenuItem, Order 
 } from "../lib/supabase";
@@ -214,10 +215,10 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
       totalQuantity += item.quantity;
     });
 
-    // 10% discount if 5 or more total pizzas in order
-    const discount = totalQuantity >= DISCOUNT_THRESHOLD ? subtotal * 0.1 : 0;
+    // Discount applied once the bulk threshold is reached
+    const discount = totalQuantity >= DISCOUNT_THRESHOLD ? subtotal * DISCOUNT_RATE : 0;
     const taxableAmount = subtotal - discount;
-    const gst = taxableAmount * 0.18;
+    const gst = taxableAmount * GST_RATE;
     const totalPayable = taxableAmount + gst;
 
     return {
@@ -582,7 +583,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                           }`}>
                             {b.code}
                           </span>
-                          <span className={`font-bold font-mono text-sm ${selectedBase?.id === b.id ? "text-[#FF6B2B]" : "text-[#FF6B2B]"}`}>₹{Number(b.price_inr).toFixed(2)}</span>
+                          <span className={`font-bold font-mono text-sm ${selectedBase?.id === b.id ? "text-[#FF6B2B]" : "text-[#FF6B2B]"}`}>{formatRupees(b.price_inr)}</span>
                         </div>
                         <h5 className={`font-semibold text-sm mt-2 ${
                           selectedBase?.id === b.id ? "text-[#1A1A1A]" : "text-[#FAFAFA]"
@@ -620,7 +621,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                           }`}>
                             {p.code}
                           </span>
-                          <span className={`font-bold font-mono text-sm ${selectedPizza?.id === p.id ? "text-[#FF6B2B]" : "text-[#FF6B2B]"}`}>₹{Number(p.price_inr).toFixed(2)}</span>
+                          <span className={`font-bold font-mono text-sm ${selectedPizza?.id === p.id ? "text-[#FF6B2B]" : "text-[#FF6B2B]"}`}>{formatRupees(p.price_inr)}</span>
                         </div>
                         <h5 className={`font-semibold text-sm mt-2 ${
                           selectedPizza?.id === p.id ? "text-[#1A1A1A]" : "text-[#FAFAFA]"
@@ -671,7 +672,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                                 {isSelected && `✓ Added`}
                               </span>
                             </div>
-                            <span className="font-bold font-mono text-sm">₹{Number(t.price_inr).toFixed(2)}</span>
+                            <span className="font-bold font-mono text-sm">{formatRupees(t.price_inr)}</span>
                           </div>
 
                           {/* Topping Title */}
@@ -738,7 +739,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                   <div className="text-right">
                     <span className="text-[#9E9E9E] text-xs font-mono uppercase block">Pizza Subtotal</span>
                     <span className="text-[#FF6B2B] font-bold font-mono text-xl">
-                      ₹{selectedBase && selectedPizza ? getSinglePizzaPrice(selectedBase, selectedPizza, selectedToppings).toFixed(2) : "0.00"}
+                      {selectedBase && selectedPizza ? formatRupees(getSinglePizzaPrice(selectedBase, selectedPizza, selectedToppings)) : "₹0.00"}
                     </span>
                   </div>
                   <button
@@ -807,7 +808,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                             </div>
 
                             <span className="text-white font-bold text-sm w-20 text-right">
-                              ₹{(itemUnitPrice * item.quantity).toFixed(2)}
+                              {formatRupees(itemUnitPrice * item.quantity)}
                             </span>
 
                             {deleteConfirmId === item.id ? (
@@ -866,7 +867,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
 
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-mono text-[#9E9E9E] hidden sm:inline">
-                    Cart Total: <b className="text-white">₹{cartTotals.totalPayable.toFixed(2)}</b> ({cartTotals.totalQuantity} items)
+                    Cart Total: <b className="text-white">{formatRupees(cartTotals.totalPayable)}</b> ({cartTotals.totalQuantity} items)
                   </span>
                   <button
                     id="btn-next-2"
@@ -926,20 +927,20 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                               <span className="text-[#FAFAFA] font-serif font-semibold">{item.pizza.name}</span>
                             </div>
                             <span className="font-mono text-sm text-[#FAFAFA] font-bold">
-                              ₹{(itemPrice * item.quantity).toFixed(2)}
+                              {formatRupees(itemPrice * item.quantity)}
                             </span>
                           </div>
 
                           <div className="pl-4 border-l border-white/10 space-y-1 text-xs font-mono text-[#9E9E9E]">
-                            <div>• Crust: {item.base.name} (₹{Number(item.base.price_inr).toFixed(2)})</div>
-                            <div>• Recipe: {item.pizza.name} (₹{Number(item.pizza.price_inr).toFixed(2)})</div>
+                            <div>• Crust: {item.base.name} ({formatRupees(item.base.price_inr)})</div>
+                            <div>• Recipe: {item.pizza.name} ({formatRupees(item.pizza.price_inr)})</div>
                             {item.toppings.map(t => (
                               <div key={t.topping.id}>
-                                • Topping: {t.topping.name} (x{t.quantity} - ₹{(Number(t.topping.price_inr) * t.quantity).toFixed(2)})
+                                • Topping: {t.topping.name} (x{t.quantity} - {formatRupees(Number(t.topping.price_inr) * t.quantity)})
                               </div>
                             ))}
                             <div className="pt-1.5 text-xs text-[#FAFAFA] flex justify-between">
-                              <span>Unit Price: ₹{itemPrice.toFixed(2)}</span>
+                              <span>Unit Price: {formatRupees(itemPrice)}</span>
                               <span>Quantity requested: ×{item.quantity}</span>
                             </div>
                           </div>
@@ -970,7 +971,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                   <div className="space-y-2.5 text-sm font-mono">
                     <div className="flex justify-between text-[#9E9E9E]">
                       <span>Items Subtotal:</span>
-                      <span>₹{cartTotals.subtotal.toFixed(2)}</span>
+                      <span>{formatRupees(cartTotals.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-[#9E9E9E]">
                       <span>Total Pizzas in Cart:</span>
@@ -980,22 +981,22 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                     {cartTotals.discount > 0 && (
                       <div className="flex justify-between text-[#4CAF50] font-medium pt-1.5 border-t border-white/5">
                         <span>Flat 10% Bulk Discount:</span>
-                        <span>−₹{cartTotals.discount.toFixed(2)}</span>
+                        <span>−{formatRupees(cartTotals.discount)}</span>
                       </div>
                     )}
 
                     <div className="flex justify-between text-[#FAFAFA] pt-1.5 border-t border-white/5 font-medium">
                       <span>Taxable Amount:</span>
-                      <span>₹{cartTotals.taxableAmount.toFixed(2)}</span>
+                      <span>{formatRupees(cartTotals.taxableAmount)}</span>
                     </div>
                     <div className="flex justify-between text-[#9E9E9E]">
                       <span>GST (18% SGST + CGST):</span>
-                      <span>+₹{cartTotals.gst.toFixed(2)}</span>
+                      <span>+{formatRupees(cartTotals.gst)}</span>
                     </div>
 
                     <div className="flex justify-between text-[#FAFAFA] pt-3.5 border-t border-double border-white/10 text-xl font-bold">
                       <span className="font-serif">Total Payable:</span>
-                      <span className="text-[#FF6B2B]">₹{cartTotals.totalPayable.toFixed(2)}</span>
+                      <span className="text-[#FF6B2B]">{formatRupees(cartTotals.totalPayable)}</span>
                     </div>
                   </div>
                 </div>
@@ -1114,7 +1115,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                 </div>
                 <div className="text-right">
                   <span className="text-[#9E9E9E] block text-xs uppercase">Total Payable Amount</span>
-                  <span className="text-[#FF6B2B] font-bold text-xl">₹{cartTotals.totalPayable.toFixed(2)}</span>
+                  <span className="text-[#FF6B2B] font-bold text-xl">{formatRupees(cartTotals.totalPayable)}</span>
                 </div>
               </div>
 
@@ -1143,7 +1144,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                     </>
                   ) : (
                     <>
-                      Place Order (₹{cartTotals.totalPayable.toFixed(2)}) <Check size={16} />
+                      Place Order ({formatRupees(cartTotals.totalPayable)}) <Check size={16} />
                     </>
                   )}
                 </button>
@@ -1206,7 +1207,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
                         <div key={item.id} className="space-y-1">
                           <div className="flex justify-between text-[#FAFAFA] font-serif font-medium text-xs">
                             <span>Pizza #{idx + 1}: {item.pizza.name} (x{item.quantity})</span>
-                            <span>₹{(itemPrice * item.quantity).toFixed(2)}</span>
+                            <span>{formatRupees(itemPrice * item.quantity)}</span>
                           </div>
                           <div className="text-[11px] text-[#9E9E9E] pl-3 leading-relaxed">
                             Crust: {item.base.name}
@@ -1219,23 +1220,23 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
 
                   <div className="flex justify-between text-[#FAFAFA] pt-2.5 border-t border-white/5 font-medium">
                     <span>Subtotal:</span>
-                    <span>₹{cartTotals.subtotal.toFixed(2)}</span>
+                    <span>{formatRupees(cartTotals.subtotal)}</span>
                   </div>
 
                   {cartTotals.discount > 0 && (
                     <div className="flex justify-between text-[#4CAF50] font-medium">
                       <span>Discount (10% Applied):</span>
-                      <span>−₹{cartTotals.discount.toFixed(2)}</span>
+                      <span>−{formatRupees(cartTotals.discount)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between text-[#9E9E9E]">
                     <span>GST (18% Service Tax):</span>
-                    <span>+₹{cartTotals.gst.toFixed(2)}</span>
+                    <span>+{formatRupees(cartTotals.gst)}</span>
                   </div>
                   <div className="flex justify-between text-[#FAFAFA] pt-2 border-t border-double border-white/10 text-base font-bold">
                     <span>Total Settled:</span>
-                    <span className="text-[#FF6B2B]">₹{cartTotals.totalPayable.toFixed(2)}</span>
+                    <span className="text-[#FF6B2B]">{formatRupees(cartTotals.totalPayable)}</span>
                   </div>
                 </div>
 

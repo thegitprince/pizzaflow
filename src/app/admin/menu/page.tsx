@@ -8,6 +8,8 @@ import {
 import { 
   getMenuItems, addMenuItem, updateMenuItem, bulkUpsertMenuItems, MenuItem 
 } from "../../../lib/supabase";
+import { categoryFromCode } from "../../../lib/core";
+import { formatRupees } from "../../../lib/format";
 
 type TabCategory = "base" | "pizza" | "topping";
 
@@ -235,14 +237,8 @@ export default function AdminMenuPage() {
         }
 
         // Determine category from code prefix
-        let category: TabCategory = "pizza";
-        if (code.startsWith("B")) {
-          category = "base";
-        } else if (code.startsWith("T")) {
-          category = "topping";
-        } else if (code.startsWith("P")) {
-          category = "pizza";
-        } else {
+        const category = categoryFromCode(code);
+        if (!category) {
           skippedCount++;
           localReport.push(`Line ${lineNum}: Skipped. Code prefix must be B, P or T (e.g. B1, P1, T1).`);
           return;
@@ -470,7 +466,7 @@ export default function AdminMenuPage() {
                         {item.name}
                       </td>
                       <td className="px-4 py-3.5 font-mono font-bold">
-                        ₹{Number(item.price_inr).toFixed(2)}
+                        {formatRupees(item.price_inr)}
                       </td>
                       <td className="px-4 py-3.5 text-xs text-[#9E9E9E] max-w-[200px] truncate hidden sm:table-cell">
                         {item.description || "—"}

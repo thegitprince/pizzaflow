@@ -46,6 +46,29 @@ export const DISCOUNT_THRESHOLD = 5;
 export const DISCOUNT_RATE = 0.10;
 export const GST_RATE = 0.18;
 
+export type OrderStatus = "confirmed" | "preparing" | "ready" | "delivered";
+
+// The kitchen status lifecycle, in advancing order.
+export const ORDER_STATUSES: OrderStatus[] = ["confirmed", "preparing", "ready", "delivered"];
+
+// Returns the next status in the cycle, wrapping back to the start.
+export function getNextOrderStatus(current: OrderStatus): OrderStatus {
+  const currentIndex = ORDER_STATUSES.indexOf(current);
+  const nextIndex = (currentIndex + 1) % ORDER_STATUSES.length;
+  return ORDER_STATUSES[nextIndex];
+}
+
+export type MenuCategory = "base" | "pizza" | "topping";
+
+// Derives a menu category from the item code prefix (B->base, P->pizza, T->topping).
+export function categoryFromCode(code: string): MenuCategory | null {
+  const normalized = code.trim().toUpperCase();
+  if (normalized.startsWith("B")) return "base";
+  if (normalized.startsWith("T")) return "topping";
+  if (normalized.startsWith("P")) return "pizza";
+  return null;
+}
+
 export function calculatePricing(
   basePrice: number,
   pizzaPrice: number,
