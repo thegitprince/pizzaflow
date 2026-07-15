@@ -312,11 +312,13 @@ export async function bulkUpsertMenuItems(items: Omit<MenuItem, "id" | "updated_
   for (const item of items) {
     try {
       // Check if exists
-      const { data: existing } = await supabase
+      const { data: existing, error: lookupError } = await supabase
         .from("menu_items")
         .select("id")
         .eq("code", item.code)
         .maybeSingle();
+
+      if (lookupError) throw lookupError;
 
       if (existing) {
         const { error } = await supabase

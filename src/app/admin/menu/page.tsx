@@ -15,6 +15,8 @@ export default function AdminMenuPage() {
   const [activeTab, setActiveTab] = useState<TabCategory>("pizza");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   // Form State (for Add / Edit)
   const [isEditing, setIsEditing] = useState(false);
@@ -40,11 +42,13 @@ export default function AdminMenuPage() {
   // Fetch menu
   const loadMenu = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const items = await getMenuItems();
       setMenuItems(items);
     } catch (e) {
       console.error("Error loading menu:", e);
+      setLoadError(e instanceof Error ? e.message : "Failed to load the menu. Please try refreshing.");
     } finally {
       setLoading(false);
     }
@@ -165,6 +169,7 @@ export default function AdminMenuPage() {
 
   // Toggle active helper
   const handleToggleActive = async (item: MenuItem) => {
+    setToggleError(null);
     try {
       await updateMenuItem(item.id, { is_active: !item.is_active });
       setMenuItems(prev => 
@@ -172,6 +177,11 @@ export default function AdminMenuPage() {
       );
     } catch (err) {
       console.error("Failed to toggle status:", err);
+      setToggleError(
+        err instanceof Error
+          ? `Could not update "${item.name}": ${err.message}`
+          : `Could not update "${item.name}". Please try again.`
+      );
     }
   };
 
@@ -436,10 +446,35 @@ export default function AdminMenuPage() {
             ))}
           </div>
 
+          {/* TOGGLE ACTION ERROR BANNER */}
+          {toggleError && (
+            <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/30 rounded-xl p-3.5 text-xs text-[#FF3B30] font-mono flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2"><AlertTriangle size={14} /> {toggleError}</span>
+              <button
+                onClick={() => setToggleError(null)}
+                className="underline hover:text-[#FAFAFA] flex-shrink-0"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           {/* MATRIX LIST TABLE */}
           {loading ? (
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FF6B2B]"></div>
+            </div>
+          ) : loadError ? (
+            <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/30 rounded-xl p-12 text-center text-[#FF3B30] space-y-3">
+              <AlertTriangle size={36} className="mx-auto text-[#FF3B30]" />
+              <p className="font-serif text-lg">Failed to load the menu.</p>
+              <p className="text-xs font-mono max-w-md mx-auto text-[#FF3B30]/80">{loadError}</p>
+              <button
+                onClick={loadMenu}
+                className="mt-2 inline-flex items-center gap-2 bg-[#FF6B2B] hover:bg-[#E05A1F] text-white px-4 py-2 rounded-lg font-bold font-mono text-xs uppercase tracking-wider transition-all"
+              >
+                <RefreshCw size={14} /> Retry
+              </button>
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="bg-[#252525] border border-dashed border-[#444444] rounded-xl p-12 text-center text-[#9E9E9E]">

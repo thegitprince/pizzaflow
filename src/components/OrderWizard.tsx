@@ -39,6 +39,7 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
   // Load menu items
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
+  const [menuError, setMenuError] = useState<string | null>(null);
 
   // Form State
   const [step, setStep] = useState(1);
@@ -71,19 +72,23 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
   const [cartError, setCartError] = useState<string | null>(null);
 
   // Fetch Menu on Mount
-  useEffect(() => {
-    async function load() {
-      try {
-        const items = await getMenuItems();
-        // Only active items for ordering
-        setMenuItems(items.filter(i => i.is_active));
-      } catch (err) {
-        console.error("Error loading menu:", err);
-      } finally {
-        setLoadingMenu(false);
-      }
+  const loadMenu = async () => {
+    setLoadingMenu(true);
+    setMenuError(null);
+    try {
+      const items = await getMenuItems();
+      // Only active items for ordering
+      setMenuItems(items.filter(i => i.is_active));
+    } catch (err) {
+      console.error("Error loading menu:", err);
+      setMenuError(err instanceof Error ? err.message : "Failed to load the menu. Please try again.");
+    } finally {
+      setLoadingMenu(false);
     }
-    load();
+  };
+
+  useEffect(() => {
+    loadMenu();
   }, []);
 
   // Sync route params with table state if customer
@@ -331,7 +336,9 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
 
       setPlacedOrder(order);
 
-      // Log completed order to the server text file
+      // Log completed order to the server text file.
+      // This is a non-critical, best-effort side effect: the order is already
+      // persisted above, so a logging failure must not block order completion.
       fetch("/api/orders/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -347,6 +354,10 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
           payment_mode: orderData.payment_mode,
           cart: cart
         })
+      }).then(res => {
+        if (!res.ok) {
+          console.error(`Failed to log order to server file: server responded with status ${res.status}`);
+        }
       }).catch(err => {
         console.error("Failed to log order to server file:", err);
       });
@@ -377,6 +388,21 @@ export default function OrderWizard({ source, tableNumberParam }: OrderWizardPro
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF6B2B] mb-4"></div>
         <p className="text-[#9E9E9E] font-medium">Stretching the dough... Loading menu...</p>
+      </div>
+    );
+  }
+
+  if (menuError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 px-6">
+        <p className="text-[#FF3B30] font-serif text-lg">Couldn't load the menu.</p>
+        <p className="text-[#FF3B30]/80 text-xs font-mono max-w-md">{menuError}</p>
+        <button
+          onClick={loadMenu}
+          className="inline-flex items-center gap-2 bg-[#FF6B2B] hover:bg-[#E05A1F] text-white px-4 py-2 rounded-lg font-bold font-mono text-xs uppercase tracking-wider transition-all"
+        >
+          <RefreshCw size={14} /> Retry
+        </button>
       </div>
     );
   }
