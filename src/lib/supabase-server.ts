@@ -5,6 +5,43 @@ const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export function isServerSupabaseConfigured(): boolean {
+  return Boolean(supabaseUrl && supabaseAnonKey);
+}
+
+export interface AuthenticatedUser {
+  id: string;
+  email: string | null;
+  role: string;
+}
+
+// Verifies a Supabase access token and resolves the caller's role.
+// A per-request client scoped to the caller's JWT ensures the profiles
+// lookup runs under that user's Row Level Security context.
+export async function authenticateToken(token: string): Promise<AuthenticatedUser | null> {
+  if (!isServerSupabaseConfigured()) return null;
+
+  const scoped = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await scoped.auth.getUser(token);
+  if (error || !data?.user) return null;
+
+  const { data: profile } = await scoped
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  return {
+    id: data.user.id,
+    email: data.user.email ?? null,
+    role: profile?.role ?? "staff",
+  };
+}
+
 export async function bulkUpsertMenuItems(items: any[]): Promise<{ imported: number, updated: number, skipped: number, report: string[] }> {
   let imported = 0;
   let updated = 0;

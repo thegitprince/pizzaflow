@@ -5,10 +5,45 @@ import dotenv from "dotenv";
 import fs from "fs/promises";
 import { createServer as createViteServer } from "vite";
 import { callOpenRouter } from "./src/lib/openrouter.js";
-import { bulkUpsertMenuItems } from "./src/lib/supabase-server.js";
+import { bulkUpsertMenuItems, authenticateToken } from "./src/lib/supabase-server.js";
+import type { RequestHandler, Request } from "express";
 
 // Load environment variables
 dotenv.config();
+
+function getBearerToken(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) return null;
+  const token = header.slice("Bearer ".length).trim();
+  return token || null;
+}
+
+// Auth guard: requires a valid Supabase session; `admin` also requires the admin role.
+function requireAuth(options: { admin?: boolean } = {}): RequestHandler {
+  return async (req, res, next) => {
+    const token = getBearerToken(req);
+    if (!token) {
+      res.status(401).json({ error: "Authentication required." });
+      return;
+    }
+    try {
+      const user = await authenticateToken(token);
+      if (!user) {
+        res.status(401).json({ error: "Invalid or expired session." });
+        return;
+      }
+      if (options.admin && user.role !== "admin") {
+        res.status(403).json({ error: "Administrator access required." });
+        return;
+      }
+      res.locals.user = user;
+      next();
+    } catch (err) {
+      console.error("Authentication error:", err);
+      res.status(401).json({ error: "Authentication failed." });
+    }
+  };
+}
 
 async function startServer() {
   const app = express();
@@ -25,7 +60,7 @@ async function startServer() {
 
   // --- API ROUTE: SEED MENU ---
   // POST endpoint to seed menu from .txt file content (admin only)
-  app.post("/api/menu/seed", async (req, res) => {
+  app.post("/api/menu/seed", requireAuth({ admin: true }), async (req, res) => {
     const { fileContent } = req.body;
     if (!fileContent) {
       return res.status(400).json({ error: "Missing fileContent in request body" });
@@ -95,7 +130,7 @@ async function startServer() {
 
   // --- API ROUTE: AI INSIGHTS ---
   // POST endpoint to generate insights for Rajan using statistics and OpenRouter/Gemini
-  app.post("/api/ai/insights", async (req, res) => {
+  app.post("/api/ai/insights", requireAuth(), async (req, res) => {
     const { question, statistics } = req.body;
     if (!question) {
       return res.status(400).json({ error: "Missing question in request body" });
@@ -129,7 +164,7 @@ User Question: ${question}`;
   });
 
   // --- API ROUTE: LOG COMPLETED ORDERS ---
-  app.post("/api/orders/log", async (req, res) => {
+  app.post("/api/orders/log", requireAuth(), async (req, res) => {
     const {
       timestamp,
       customer_name,
