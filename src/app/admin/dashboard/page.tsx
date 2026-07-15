@@ -11,6 +11,8 @@ import OrderSummary from "../../../components/OrderSummary";
 export default function AdminDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   // Filters
   const [filterDate, setFilterDate] = useState(() => {
@@ -35,6 +37,7 @@ export default function AdminDashboardPage() {
   // Fetch orders from Supabase/Fallback
   const loadOrders = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       // Pass the filter parameters directly to the database layer
       const data = await getOrders({
@@ -45,6 +48,7 @@ export default function AdminDashboardPage() {
       setOrders(data);
     } catch (e) {
       console.error("Failed to load dashboard orders:", e);
+      setLoadError(e instanceof Error ? e.message : "Failed to load analytics. Please try refreshing.");
     } finally {
       setLoading(false);
     }
@@ -63,6 +67,7 @@ export default function AdminDashboardPage() {
     const nextIndex = (currentIndex + 1) % statuses.length;
     const nextStatus = statuses[nextIndex];
 
+    setStatusError(null);
     try {
       await updateOrderStatus(order.id, nextStatus);
       // Optimistic state update to avoid full reload flicker
@@ -71,6 +76,11 @@ export default function AdminDashboardPage() {
       );
     } catch (err) {
       console.error("Failed to update status:", err);
+      setStatusError(
+        err instanceof Error
+          ? `Could not update order status: ${err.message}`
+          : "Could not update order status. Please try again."
+      );
     }
   };
 
@@ -228,6 +238,24 @@ export default function AdminDashboardPage() {
             <RefreshCw size={18} />
           </button>
         </div>
+
+        {/* LOAD / STATUS ERROR BANNERS */}
+        {loadError && (
+          <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/30 rounded-xl p-4 text-sm text-[#FF3B30] font-mono flex items-center justify-between gap-3">
+            <span>{loadError}</span>
+            <button
+              onClick={loadOrders}
+              className="flex-shrink-0 inline-flex items-center gap-1.5 bg-[#FF6B2B] hover:bg-[#E05A1F] text-white px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all"
+            >
+              <RefreshCw size={14} /> Retry
+            </button>
+          </div>
+        )}
+        {statusError && (
+          <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/30 rounded-xl p-3.5 text-xs text-[#FF3B30] font-mono">
+            {statusError}
+          </div>
+        )}
 
         {/* SUMMARY CARDS SECTION */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

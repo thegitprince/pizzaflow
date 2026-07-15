@@ -13,6 +13,8 @@ interface OrderSummaryProps {
 export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<"today" | "month" | "quarter" | "all">("today");
   
   // Modal State for Detailed Bill
@@ -21,6 +23,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
   // Fetch orders
   const loadOrders = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       // Fetch all orders without filtering, then perform precise local-time range filtering in memory.
       // This is extremely reliable across different server/timezone/client configurations and works with Mock DB.
@@ -28,6 +31,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
       setOrders(data);
     } catch (e) {
       console.error("Failed to load summary orders:", e);
+      setLoadError(e instanceof Error ? e.message : "Failed to load orders. Please try refreshing.");
     } finally {
       setLoading(false);
     }
@@ -77,6 +81,7 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
     const nextIndex = (currentIndex + 1) % statuses.length;
     const nextStatus = statuses[nextIndex];
 
+    setActionError(null);
     try {
       await updateOrderStatus(order.id, nextStatus);
       setOrders(prev => 
@@ -87,6 +92,11 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
       }
     } catch (err) {
       console.error("Failed to update status:", err);
+      setActionError(
+        err instanceof Error
+          ? `Could not update order status: ${err.message}`
+          : "Could not update order status. Please try again."
+      );
     }
   };
 
@@ -232,6 +242,20 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
         </div>
       </div>
 
+      {/* ACTION ERROR BANNER */}
+      {actionError && (
+        <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/30 rounded-xl p-3.5 text-xs text-[#FF3B30] font-mono flex items-center justify-between gap-3">
+          <span>{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-[#FF3B30] hover:text-white transition-colors flex-shrink-0"
+            title="Dismiss"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* THREE BENTO METRIC CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: Revenue */}
@@ -277,6 +301,17 @@ export default function OrderSummary({ allowStatusUpdate = true }: OrderSummaryP
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FF6B2B]"></div>
+          </div>
+        ) : loadError ? (
+          <div className="p-16 text-center text-[#FF3B30] space-y-3">
+            <p className="font-serif text-lg">Failed to load orders.</p>
+            <p className="text-xs font-mono max-w-md mx-auto text-[#FF3B30]/80">{loadError}</p>
+            <button
+              onClick={loadOrders}
+              className="mt-2 inline-flex items-center gap-2 bg-[#FF6B2B] hover:bg-[#E05A1F] text-white px-4 py-2 rounded-lg font-bold font-mono text-xs uppercase tracking-wider transition-all"
+            >
+              <RefreshCw size={14} /> Retry
+            </button>
           </div>
         ) : filteredOrders.length === 0 ? (
           <div className="p-16 text-center text-[#9E9E9E] space-y-1.5">

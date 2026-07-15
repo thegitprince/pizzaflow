@@ -3,9 +3,18 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
 
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function bulkUpsertMenuItems(items: any[]): Promise<{ imported: number, updated: number, skipped: number, report: string[] }> {
+  if (!isSupabaseConfigured) {
+    throw new Error(
+      "Supabase is not configured on the server. " +
+      "Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set."
+    );
+  }
+
   let imported = 0;
   let updated = 0;
   let skipped = 0;
@@ -14,11 +23,13 @@ export async function bulkUpsertMenuItems(items: any[]): Promise<{ imported: num
   for (const item of items) {
     try {
       // Check if exists
-      const { data: existing } = await supabase
+      const { data: existing, error: lookupError } = await supabase
         .from("menu_items")
         .select("id")
         .eq("code", item.code)
         .maybeSingle();
+
+      if (lookupError) throw lookupError;
 
       if (existing) {
         const { error } = await supabase
